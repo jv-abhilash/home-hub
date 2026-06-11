@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useAppStore } from '../../store/index'
-import { PiggyBank, ClipboardList, Users, Wrench, Palette, MessageCircle, Home, LogOut } from 'lucide-react'
+import { PiggyBank, ClipboardList, Users, Wrench, Palette, MessageCircle, Home, LogOut, Sun, Moon } from 'lucide-react'
 
 const nav = [
   { to: '/fund',        icon: PiggyBank,     label: 'Fund tracker' },
@@ -11,7 +11,7 @@ const nav = [
 ]
 
 export default function Sidebar({ onSignOut, user }) {
-  const { chatOpen, setChatOpen, setActiveModule } = useAppStore()
+  const { chatOpen, setChatOpen, setActiveModule, darkMode, toggleDarkMode } = useAppStore()
 
   return (
     <aside className="w-56 border-r border-border flex flex-col py-6 px-3 gap-1 shrink-0">
@@ -45,6 +45,15 @@ export default function Sidebar({ onSignOut, user }) {
         >
           <MessageCircle size={16} />
           Ask AI
+        </button>
+
+        <button
+          onClick={toggleDarkMode}
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm w-full
+            text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        >
+          {darkMode ? <Sun size={16} /> : <Moon size={16} />}
+          {darkMode ? 'Light mode' : 'Dark mode'}
         </button>
 
         <div className="px-3 py-2 border-t border-border mt-1">

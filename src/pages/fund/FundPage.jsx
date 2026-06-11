@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
-import { PiggyBank, Plus, Trash2 } from 'lucide-react'
+import { PiggyBank, Plus, Trash2, AlertTriangle, Target } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import toast from 'react-hot-toast'
 
@@ -20,6 +20,9 @@ export default function FundPage() {
 
   const [form, setForm] = useState({ title: '', amount: '', category: 'Renovation', date: new Date().toISOString().slice(0,10), notes: '' })
   const [showForm, setShowForm] = useState(false)
+  const [budget, setBudget] = useState(() => localStorage.getItem('homeBudget') || '')
+  const [editingBudget, setEditingBudget] = useState(false)
+  const [budgetInput, setBudgetInput] = useState('')
 
   const addExpense = useMutation({
     mutationFn: async (exp) => {
@@ -47,11 +50,29 @@ export default function FundPage() {
   })
 
   const total = expenses.reduce((s, e) => s + Number(e.amount), 0)
+  const thisMonth = new Date().toISOString().slice(0, 7)
+  const monthTotal = expenses
+    .filter(e => e.date?.startsWith(thisMonth))
+    .reduce((s, e) => s + Number(e.amount), 0)
 
   const chartData = CATEGORIES.map(cat => ({
     name: cat,
     amount: expenses.filter(e => e.category === cat).reduce((s, e) => s + Number(e.amount), 0)
   })).filter(d => d.amount > 0)
+
+  const budgetNum = Number(budget)
+  const budgetPercent = budgetNum > 0 ? Math.min((total / budgetNum) * 100, 100) : 0
+  const isOverBudget = budgetNum > 0 && total > budgetNum
+  const isNearBudget = budgetNum > 0 && !isOverBudget && budgetPercent >= 80
+
+  function saveBudget() {
+    if (!budgetInput || isNaN(Number(budgetInput))) return toast.error('Enter a valid amount')
+    localStorage.setItem('homeBudget', budgetInput)
+    setBudget(budgetInput)
+    setBudgetInput('')
+    setEditingBudget(false)
+    toast.success('Budget set')
+  }
 
   function handleSubmit(ev) {
     ev.preventDefault()
@@ -74,11 +95,29 @@ export default function FundPage() {
         </button>
       </div>
 
+      {/* Budget warning */}
+      {isOverBudget && (
+        <div className="flex items-center gap-2 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3 mb-4 text-sm text-red-700 dark:text-red-400">
+          <AlertTriangle size={16} />
+          Over budget by ₹{(total - budgetNum).toLocaleString()} — you have spent ₹{total.toLocaleString()} of ₹{budgetNum.toLocaleString()}
+        </div>
+      )}
+      {isNearBudget && (
+        <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 mb-4 text-sm text-amber-700 dark:text-amber-400">
+          <AlertTriangle size={16} />
+          Approaching budget — {Math.round(budgetPercent)}% used, ₹{(budgetNum - total).toLocaleString()} remaining
+        </div>
+      )}
+
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-4 gap-4 mb-6">
         <div className="bg-muted rounded-xl p-4">
           <p className="text-xs text-muted-foreground mb-1">Total spent</p>
           <p className="text-2xl font-semibold">₹{total.toLocaleString()}</p>
+        </div>
+        <div className="bg-muted rounded-xl p-4">
+          <p className="text-xs text-muted-foreground mb-1">This month</p>
+          <p className="text-2xl font-semibold">₹{monthTotal.toLocaleString()}</p>
         </div>
         <div className="bg-muted rounded-xl p-4">
           <p className="text-xs text-muted-foreground mb-1">Transactions</p>
@@ -88,6 +127,55 @@ export default function FundPage() {
           <p className="text-xs text-muted-foreground mb-1">Top category</p>
           <p className="text-2xl font-semibold">{chartData[0]?.name || '—'}</p>
         </div>
+      </div>
+
+      {/* Budget progress */}
+      <div className="bg-muted rounded-xl p-4 mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Target size={16} className="text-muted-foreground" />
+            <span className="text-sm font-medium">Home budget</span>
+          </div>
+          <button
+            onClick={() => { setEditingBudget(!editingBudget); setBudgetInput(budget) }}
+            className="text-xs text-muted-foreground hover:text-foreground underline"
+          >
+            {budget ? 'Edit' : 'Set budget'}
+          </button>
+        </div>
+
+        {editingBudget && (
+          <div className="flex gap-2 mb-3">
+            <input
+              className="flex-1 bg-background rounded-lg px-3 py-2 text-sm outline-none border border-border"
+              placeholder="Total home budget in ₹"
+              type="number"
+              value={budgetInput}
+              onChange={e => setBudgetInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && saveBudget()}
+            />
+            <button onClick={saveBudget} className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm">
+              Save
+            </button>
+          </div>
+        )}
+
+        {budgetNum > 0 ? (
+          <>
+            <div className="w-full bg-background rounded-full h-2 mb-2">
+              <div
+                className={`h-2 rounded-full transition-all ${isOverBudget ? 'bg-red-500' : isNearBudget ? 'bg-amber-500' : 'bg-primary'}`}
+                style={{ width: `${budgetPercent}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>₹{total.toLocaleString()} spent</span>
+              <span>₹{budgetNum.toLocaleString()} budget</span>
+            </div>
+          </>
+        ) : (
+          <p className="text-xs text-muted-foreground">Set a budget to track your spending progress</p>
+        )}
       </div>
 
       {/* Add form */}
@@ -136,6 +224,7 @@ export default function FundPage() {
             <div className="flex flex-col">
               <span className="text-sm font-medium">{e.title}</span>
               <span className="text-xs text-muted-foreground">{e.category} · {e.date}</span>
+              {e.notes && <span className="text-xs text-muted-foreground">{e.notes}</span>}
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm font-semibold">₹{Number(e.amount).toLocaleString()}</span>

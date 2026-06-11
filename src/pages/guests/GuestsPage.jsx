@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
-import { Users, Plus, Trash2 } from 'lucide-react'
+import { Users, Plus, Trash2, Download } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const RSVP_COLORS = {
@@ -14,6 +14,26 @@ const fetchGuests = async () => {
   const { data, error } = await supabase.from('guests').select('*').order('created_at', { ascending: false })
   if (error) throw error
   return data
+}
+
+function exportCSV(guests) {
+  const headers = ['Name', 'Phone', 'RSVP', 'Dietary', 'Gift']
+  const rows = guests.map(g => [
+    g.name,
+    g.phone || '',
+    g.rsvp,
+    g.dietary || '',
+    g.gift || ''
+  ])
+  const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n')
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `guests-${new Date().toISOString().slice(0,10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+  toast.success('Guest list exported')
 }
 
 export default function GuestsPage() {
@@ -74,12 +94,22 @@ export default function GuestsPage() {
           <Users size={24} />
           <h1 className="text-2xl font-semibold">Guests & events</h1>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm"
-        >
-          <Plus size={16} /> Add guest
-        </button>
+        <div className="flex gap-2">
+          {guests.length > 0 && (
+            <button
+              onClick={() => exportCSV(guests)}
+              className="flex items-center gap-2 border border-border px-4 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Download size={16} /> Export CSV
+            </button>
+          )}
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm"
+          >
+            <Plus size={16} /> Add guest
+          </button>
+        </div>
       </div>
 
       {/* Summary cards */}
@@ -88,17 +118,17 @@ export default function GuestsPage() {
           <p className="text-xs text-muted-foreground mb-1">Total</p>
           <p className="text-2xl font-semibold">{guests.length}</p>
         </div>
-        <div className="bg-green-50 rounded-xl p-4">
+        <div className="bg-green-50 dark:bg-green-950 rounded-xl p-4">
           <p className="text-xs text-green-600 mb-1">Confirmed</p>
-          <p className="text-2xl font-semibold text-green-700">{confirmed}</p>
+          <p className="text-2xl font-semibold text-green-700 dark:text-green-400">{confirmed}</p>
         </div>
-        <div className="bg-amber-50 rounded-xl p-4">
+        <div className="bg-amber-50 dark:bg-amber-950 rounded-xl p-4">
           <p className="text-xs text-amber-600 mb-1">Pending</p>
-          <p className="text-2xl font-semibold text-amber-700">{pending}</p>
+          <p className="text-2xl font-semibold text-amber-700 dark:text-amber-400">{pending}</p>
         </div>
-        <div className="bg-red-50 rounded-xl p-4">
+        <div className="bg-red-50 dark:bg-red-950 rounded-xl p-4">
           <p className="text-xs text-red-500 mb-1">Declined</p>
-          <p className="text-2xl font-semibold text-red-600">{declined}</p>
+          <p className="text-2xl font-semibold text-red-600 dark:text-red-400">{declined}</p>
         </div>
       </div>
 
