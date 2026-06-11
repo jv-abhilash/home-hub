@@ -1,8 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useAppStore } from '../../store/index'
-import {
-  PiggyBank, ClipboardList, Users, Wrench, Palette, MessageCircle, Home
-} from 'lucide-react'
+import { PiggyBank, ClipboardList, Users, Wrench, Palette, MessageCircle, Home, LogOut } from 'lucide-react'
 
 const nav = [
   { to: '/fund',        icon: PiggyBank,     label: 'Fund tracker' },
@@ -12,7 +10,7 @@ const nav = [
   { to: '/interior',    icon: Palette,       label: 'Interior design' },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ onSignOut, user }) {
   const { chatOpen, setChatOpen, setActiveModule } = useAppStore()
 
   return (
@@ -39,7 +37,7 @@ export default function Sidebar() {
         </NavLink>
       ))}
 
-      <div className="mt-auto">
+      <div className="mt-auto flex flex-col gap-1">
         <button
           onClick={() => setChatOpen(!chatOpen)}
           className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm w-full
@@ -48,6 +46,17 @@ export default function Sidebar() {
           <MessageCircle size={16} />
           Ask AI
         </button>
+
+        <div className="px-3 py-2 border-t border-border mt-1">
+          <p className="text-xs text-muted-foreground truncate mb-2">{user?.email}</p>
+          <button
+            onClick={onSignOut}
+            className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <LogOut size={14} />
+            Sign out
+          </button>
+        </div>
       </div>
     </aside>
   )
