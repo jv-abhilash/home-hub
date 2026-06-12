@@ -1,9 +1,11 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
+import { AnimatePresence } from 'framer-motion'
 import { useAuth } from './hooks/useAuth'
 import Sidebar from './components/shared/Sidebar'
 import ChatPanel from './components/shared/ChatPanel'
+import PageTransition from './components/shared/PageTransition'
 import AuthPage from './pages/auth/AuthPage'
 import FundPage from './pages/fund/FundPage'
 import PlannerPage from './pages/planner/PlannerPage'
@@ -12,6 +14,22 @@ import MaintenancePage from './pages/maintenance/MaintenancePage'
 import InteriorPage from './pages/interior/InteriorPage'
 
 const queryClient = new QueryClient()
+
+function AnimatedRoutes() {
+  const location = useLocation()
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<Navigate to="/fund" replace />} />
+        <Route path="/fund" element={<PageTransition><FundPage /></PageTransition>} />
+        <Route path="/planner" element={<PageTransition><PlannerPage /></PageTransition>} />
+        <Route path="/guests" element={<PageTransition><GuestsPage /></PageTransition>} />
+        <Route path="/maintenance" element={<PageTransition><MaintenancePage /></PageTransition>} />
+        <Route path="/interior" element={<PageTransition><InteriorPage /></PageTransition>} />
+      </Routes>
+    </AnimatePresence>
+  )
+}
 
 function AppShell() {
   const { user, loading, signOut } = useAuth()
@@ -30,14 +48,7 @@ function AppShell() {
     <div className="flex h-screen bg-background text-foreground overflow-hidden">
       <Sidebar onSignOut={signOut} user={user} />
       <main className="flex-1 overflow-y-auto p-6">
-        <Routes>
-          <Route path="/" element={<Navigate to="/fund" replace />} />
-          <Route path="/fund" element={<FundPage />} />
-          <Route path="/planner" element={<PlannerPage />} />
-          <Route path="/guests" element={<GuestsPage />} />
-          <Route path="/maintenance" element={<MaintenancePage />} />
-          <Route path="/interior" element={<InteriorPage />} />
-        </Routes>
+        <AnimatedRoutes />
       </main>
       <ChatPanel />
     </div>
