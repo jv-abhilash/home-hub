@@ -3,10 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { generateRoomImage } from '../../lib/imageGen'
 import CostEstimate from '../../components/interior/CostEstimate'
-import { Palette, Plus, Trash2, Upload, Send, Camera, X, Image, RotateCcw } from 'lucide-react'
+import { captureFromCamera, pickFromGallery } from '../../hooks/useCamera'
+import { Palette, Plus, Trash2, Upload, Send, Camera, X, Image, RotateCcw, FolderOpen } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useDropzone } from 'react-dropzone'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Capacitor } from '@capacitor/core'
 
 const OLLAMA_BASE = import.meta.env.VITE_OLLAMA_URL || 'http://192.168.68.59:11434'
 const OLLAMA_CHAT = `${OLLAMA_BASE}/api/chat`
@@ -24,10 +26,6 @@ function toBase64(file) {
     reader.onerror = reject
     reader.readAsDataURL(file)
   })
-}
-
-function isCameraSupported() {
-  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
 }
 
 async function sendToLLM({ messages, base64Image, roomName, budget, backend }) {
@@ -83,12 +81,12 @@ async function sendToLLM({ messages, base64Image, roomName, budget, backend }) {
 export default function InteriorPage() {
   const qc = useQueryClient()
   const { data: rooms = [], isLoading } = useQuery({ queryKey: ['rooms'], queryFn: fetchRooms })
+  const isNative = Capacitor.isNativePlatform()
 
   const [form, setForm] = useState({ name: '', style: '', notes: '' })
   const [showForm, setShowForm] = useState(false)
   const [selectedRoom, setSelectedRoom] = useState(null)
 
-  const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
   const [base64Image, setBase64Image] = useState(null)
   const [budget, setBudget] = useState('')
@@ -103,17 +101,12 @@ export default function InteriorPage() {
   const [generatedImage, setGeneratedImage] = useState(null)
   const [generating, setGenerating] = useState(false)
 
-  const [showCamera, setShowCamera] = useState(false)
-  const videoRef = useRef(null)
-  const streamRef = useRef(null)
-  const canvasRef = useRef(null)
   const chatEndRef = useRef(null)
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: async (files) => {
       const file = files[0]
       if (!file) return
-      setImageFile(file)
       setImagePreview(URL.createObjectURL(file))
       const b64 = await toBase64(file)
       setBase64Image(b64)
@@ -124,52 +117,37 @@ export default function InteriorPage() {
     maxFiles: 1
   })
 
-  async function startCamera() {
+  async function handleNativeCamera() {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-      streamRef.current = stream
-      setShowCamera(true)
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream
-          videoRef.current.play()
-        }
-      }, 100)
-    } catch {
-      toast.error('Camera not available — please upload a file instead')
+      const result = await captureFromCamera()
+      if (result) {
+        setImagePreview(result.preview)
+        setBase64Image(result.base64)
+        setMessages([])
+        setChatStarted(false)
+        toast.success('Photo captured')
+      }
+    } catch (err) {
+      toast.error('Camera error: ' + err.message)
     }
   }
 
-  function stopCamera() {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop())
-      streamRef.current = null
+  async function handleNativeGallery() {
+    try {
+      const result = await pickFromGallery()
+      if (result) {
+        setImagePreview(result.preview)
+        setBase64Image(result.base64)
+        setMessages([])
+        setChatStarted(false)
+        toast.success('Photo selected')
+      }
+    } catch (err) {
+      toast.error('Gallery error: ' + err.message)
     }
-    setShowCamera(false)
-  }
-
-  function capturePhoto() {
-    const video = videoRef.current
-    const canvas = canvasRef.current
-    if (!video || !canvas) return
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    canvas.getContext('2d').drawImage(video, 0, 0)
-    canvas.toBlob(async (blob) => {
-      const file = new File([blob], 'capture.jpg', { type: 'image/jpeg' })
-      setImageFile(file)
-      setImagePreview(URL.createObjectURL(blob))
-      const b64 = await toBase64(file)
-      setBase64Image(b64)
-      setMessages([])
-      setChatStarted(false)
-      stopCamera()
-      toast.success('Photo captured')
-    }, 'image/jpeg', 0.9)
   }
 
   function clearImage() {
-    setImageFile(null)
     setImagePreview(null)
     setBase64Image(null)
     setMessages([])
@@ -319,7 +297,6 @@ export default function InteriorPage() {
               setSelectedRoom(r)
               setMessages([])
               setChatStarted(false)
-              setImageFile(null)
               setImagePreview(null)
               setBase64Image(null)
               setGeneratedImage(null)
@@ -358,18 +335,7 @@ export default function InteriorPage() {
                 ))}
               </div>
 
-              {showCamera && (
-                <div className="mb-3 relative rounded-xl overflow-hidden bg-black">
-                  <video ref={videoRef} className="w-full max-h-48 object-cover" playsInline muted />
-                  <canvas ref={canvasRef} className="hidden" />
-                  <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-2">
-                    <button onClick={capturePhoto} className="bg-white text-black px-4 py-1.5 rounded-full text-xs font-medium">Capture</button>
-                    <button onClick={stopCamera} className="bg-black/60 text-white px-3 py-1.5 rounded-full text-xs">Cancel</button>
-                  </div>
-                </div>
-              )}
-
-              {imagePreview && !showCamera && (
+              {imagePreview && (
                 <div className="relative mb-3">
                   <img src={imagePreview} alt="Room" className="w-full rounded-xl object-cover max-h-48" />
                   <button onClick={clearImage} className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1">
@@ -383,21 +349,39 @@ export default function InteriorPage() {
                 </div>
               )}
 
-              {!imagePreview && !showCamera && (
-                <div className="flex gap-2 mb-3">
-                  <div {...getRootProps()}
-                    className={`flex-1 border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors
-                      ${isDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}>
-                    <input {...getInputProps()} />
-                    <Upload size={18} className="mx-auto mb-1 text-muted-foreground" />
-                    <p className="text-xs text-muted-foreground">Upload photo</p>
-                  </div>
-                  {isCameraSupported() && (
-                    <button onClick={startCamera}
-                      className="flex flex-col items-center justify-center gap-1 border-2 border-dashed border-border rounded-xl px-4 text-muted-foreground hover:border-primary/50 transition-colors">
-                      <Camera size={18} />
-                      <p className="text-xs">Camera</p>
-                    </button>
+              {!imagePreview && (
+                <div className="flex flex-col gap-2 mb-3">
+                  {isNative ? (
+                    <>
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={handleNativeCamera}
+                        className="flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-xl py-3 text-sm"
+                      >
+                        <Camera size={18} />
+                        Open camera
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={handleNativeGallery}
+                        className="flex items-center justify-center gap-2 bg-muted border border-border rounded-xl py-3 text-sm"
+                      >
+                        <FolderOpen size={18} />
+                        Choose from gallery
+                      </motion.button>
+                    </>
+                  ) : (
+                    <div
+                      {...getRootProps()}
+                      className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors
+                        ${isDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+                    >
+                      <input {...getInputProps()} />
+                      <Upload size={20} className="mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">Drop photo or click to upload</p>
+                    </div>
                   )}
                 </div>
               )}
@@ -428,7 +412,9 @@ export default function InteriorPage() {
 
             <div className="border border-border rounded-xl p-4">
               <p className="text-sm font-medium mb-1">Generate room image</p>
-              <p className="text-xs text-muted-foreground mb-3">Coming soon — needs ComfyUI</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                {isNative ? 'Coming soon — needs Stable Diffusion or Stability AI' : 'Coming soon — needs ComfyUI'}
+              </p>
               <div className="flex gap-2">
                 <input
                   className="flex-1 bg-muted rounded-lg px-3 py-2 text-xs outline-none border border-border"
@@ -443,7 +429,7 @@ export default function InteriorPage() {
               </div>
               {generatedImage
                 ? <img src={generatedImage} alt="Generated" className="mt-3 rounded-xl w-full object-cover" />
-                : <p className="text-xs text-muted-foreground text-center mt-3">Endpoint ready — connect ComfyUI to activate</p>
+                : <p className="text-xs text-muted-foreground text-center mt-3">Endpoint ready — connect image generation to activate</p>
               }
             </div>
           </div>
@@ -467,7 +453,9 @@ export default function InteriorPage() {
               {messages.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
                   <Palette size={32} className="text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">Upload a room photo and click Analyze room to start</p>
+                  <p className="text-sm text-muted-foreground">
+                    {isNative ? 'Tap "Open camera" or "Choose from gallery" then click Analyze' : 'Upload a room photo and click Analyze room to start'}
+                  </p>
                   <p className="text-xs text-muted-foreground">Then keep chatting to refine your design</p>
                 </div>
               )}
