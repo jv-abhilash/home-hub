@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-const OLLAMA_URL = 'http://localhost:11434/api/chat'
+const OLLAMA_BASE = import.meta.env.VITE_OLLAMA_URL || 'http://192.168.68.59:11434'
+const OLLAMA_CHAT = `${OLLAMA_BASE}/api/chat`
 const CLAUDE_URL = 'https://api.anthropic.com/v1/messages'
 
 async function fetchContext(module) {
@@ -129,7 +130,7 @@ ${context}`
         const reply = data.content[0].text
         setMessages([...newMessages, { role: 'assistant', content: reply }])
       } else {
-        const res = await fetch(OLLAMA_URL, {
+        const res = await fetch(OLLAMA_CHAT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

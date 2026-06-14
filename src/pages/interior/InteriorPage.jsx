@@ -8,6 +8,9 @@ import toast from 'react-hot-toast'
 import { useDropzone } from 'react-dropzone'
 import { motion, AnimatePresence } from 'framer-motion'
 
+const OLLAMA_BASE = import.meta.env.VITE_OLLAMA_URL || 'http://192.168.68.59:11434'
+const OLLAMA_CHAT = `${OLLAMA_BASE}/api/chat`
+
 const fetchRooms = async () => {
   const { data, error } = await supabase.from('rooms').select('*').order('created_at', { ascending: false })
   if (error) throw error
@@ -35,7 +38,7 @@ async function sendToLLM({ messages, base64Image, roomName, budget, backend }) {
       }
       return { role: m.role, content: m.content }
     })
-    const res = await fetch('http://localhost:11434/api/chat', {
+    const res = await fetch(OLLAMA_CHAT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: 'llava', stream: false, messages: ollamaMessages })
@@ -84,7 +87,6 @@ export default function InteriorPage() {
   const [form, setForm] = useState({ name: '', style: '', notes: '' })
   const [showForm, setShowForm] = useState(false)
   const [selectedRoom, setSelectedRoom] = useState(null)
-  const [activeTab, setActiveTab] = useState('chat')
 
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
@@ -307,7 +309,6 @@ export default function InteriorPage() {
         </form>
       )}
 
-      {/* Room cards */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         {isLoading && <p className="text-sm text-muted-foreground">Loading...</p>}
         {rooms.map(r => (
@@ -343,11 +344,7 @@ export default function InteriorPage() {
 
       {selectedRoom && (
         <div className="grid grid-cols-5 gap-4">
-
-          {/* Left panel */}
           <div className="col-span-2 flex flex-col gap-3">
-
-            {/* Photo upload */}
             <div className="border border-border rounded-xl p-4">
               <p className="text-sm font-medium mb-3">Room photo</p>
 
@@ -423,14 +420,12 @@ export default function InteriorPage() {
               </motion.button>
             </div>
 
-            {/* Cost estimator */}
             <CostEstimate
               base64Image={base64Image}
               roomName={selectedRoom.name}
               backend={backend}
             />
 
-            {/* Image generation */}
             <div className="border border-border rounded-xl p-4">
               <p className="text-sm font-medium mb-1">Generate room image</p>
               <p className="text-xs text-muted-foreground mb-3">Coming soon — needs ComfyUI</p>
@@ -453,7 +448,6 @@ export default function InteriorPage() {
             </div>
           </div>
 
-          {/* Right: chat */}
           <div className="col-span-3 border border-border rounded-xl flex flex-col" style={{ height: '600px' }}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <div>

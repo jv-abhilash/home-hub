@@ -1,5 +1,5 @@
+const OLLAMA_BASE = import.meta.env.VITE_OLLAMA_URL || 'http://192.168.68.59:11434'
 const COMFYUI_URL = 'http://localhost:7860'
-const OLLAMA_URL = 'http://localhost:11434'
 
 export const IMAGE_GEN_BACKENDS = {
   comfyui: 'ComfyUI (Stable Diffusion)',
@@ -9,7 +9,7 @@ export const IMAGE_GEN_BACKENDS = {
 
 export async function analyzeRoomImage({ base64Image, roomName, budget, backend = 'ollama_llava' }) {
   if (backend === 'ollama_llava') {
-    const res = await fetch(`${OLLAMA_URL}/api/chat`, {
+    const res = await fetch(`${OLLAMA_BASE}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -68,7 +68,6 @@ export async function generateRoomImage({ prompt, style, roomName, backend = 'co
   if (backend === 'comfyui') {
     const fullPrompt = `interior design, ${roomName}, ${style || 'modern'} style, ${prompt}, photorealistic, 4k, professional photography`
     const negativePrompt = 'ugly, blurry, low quality, distorted, watermark'
-
     const res = await fetch(`${COMFYUI_URL}/sdapi/v1/txt2img`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

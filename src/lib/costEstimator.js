@@ -1,4 +1,6 @@
 const TAVILY_URL = 'https://api.tavily.com/search'
+const OLLAMA_BASE = import.meta.env.VITE_OLLAMA_URL || 'http://192.168.68.59:11434'
+const OLLAMA_CHAT = `${OLLAMA_BASE}/api/chat`
 
 async function searchPrice(material) {
   const res = await fetch(TAVILY_URL, {
@@ -26,7 +28,7 @@ async function searchPrice(material) {
 }
 
 async function identifyMaterials({ base64Image, roomName, backend }) {
-  const prompt = `Look at this ${roomName} image carefully. 
+  const prompt = `Look at this ${roomName} image carefully.
 List ONLY the materials and work items needed to renovate or improve this room.
 Reply in this exact JSON format with no extra text:
 {
@@ -64,7 +66,7 @@ Keep it to maximum 8 most important items.`
     const json = text.match(/\{[\s\S]*\}/)
     return JSON.parse(json[0])
   } else {
-    const res = await fetch('http://localhost:11434/api/chat', {
+    const res = await fetch(OLLAMA_CHAT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -103,9 +105,9 @@ CURRENT MARKET PRICES (from web search):
 ${priceContext}
 
 Based on the above real market prices, calculate:
-1. Cost for each material (quantity × price)
+1. Cost for each material (quantity x price)
 2. Add 10% labor cost on top of materials
-3. Give a 10% confidence interval for each item (±10%)
+3. Give a 10% confidence interval for each item
 4. Total estimate with confidence interval
 
 Reply in this exact JSON format only, no extra text:
@@ -129,7 +131,7 @@ Reply in this exact JSON format only, no extra text:
   "total": number
 }`
 
-  const res = await fetch('http://localhost:11434/api/chat', {
+  const res = await fetch(OLLAMA_CHAT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
