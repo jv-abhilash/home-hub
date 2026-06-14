@@ -81,3 +81,37 @@ home-hub/
 - Stubbed in InteriorPage.jsx under generateRoomImage()
 - Will connect to ComfyUI or Automatic1111 at http://localhost:7860
 - Models: SDXL, Realistic Vision, Interior Design LoRA
+
+---
+
+## Building the Android APK
+
+Run these in order every time you make changes:
+
+### 1. Build React app
+cd ~/home-hub
+npm run build
+
+### 2. Sync to Android project
+npx cap sync android
+
+### 3. Build APK in Android Studio
+- Open Android Studio
+- File → Sync Project with Gradle Files
+- Build → Clean Project
+- Build → Build Bundle(s)/APK(s) → Build APK(s)
+
+### 4. Transfer APK to tablet
+cd ~/home-hub/android/app/build/outputs/apk/debug/
+python3 -m http.server 8080
+On tablet: open browser → http://192.168.68.59:8080 → download app-debug.apk → install
+
+### APK location
+~/home-hub/android/app/build/outputs/apk/debug/app-debug.apk
+
+### Important notes
+- Always run npm run build before npx cap sync
+- Always Clean Project before Build APK in Android Studio
+- When installing on tablet tap Replace to update existing app
+- Ollama must be running for Ask AI to work
+- Tablet and PC must be on same WiFi network
