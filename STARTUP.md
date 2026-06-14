@@ -115,3 +115,24 @@ On tablet: open browser → http://192.168.68.59:8080 → download app-debug.apk
 - When installing on tablet tap Replace to update existing app
 - Ollama must be running for Ask AI to work
 - Tablet and PC must be on same WiFi network
+
+---
+
+## Project structure (updated)
+
+~/projects/
+  home-hub/              Frontend — React Vite app
+  home-hub-backend/      Backend — FastAPI stub (not yet active)
+
+## GitHub repositories
+Frontend:  https://github.com/jv-abhilash/home-hub
+Backend:   https://github.com/jv-abhilash/home-hub-backend (PRIVATE)
+
+## Starting the app (updated path)
+cd ~/projects/home-hub
+npm run dev -- --host
+
+## Backend (when ready to implement)
+cd ~/projects/home-hub-backend
+source .venv/bin/activate
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
