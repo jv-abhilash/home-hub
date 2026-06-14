@@ -1,0 +1,11 @@
+{
+  "appId": "com.abhilash.homehub",
+  "appName": "Home Hub",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": true
+  },
+  "server": {
+    "cleartext": true
+  }
+}
