@@ -7,6 +7,7 @@ import Sidebar from './components/shared/Sidebar'
 import ChatPanel from './components/shared/ChatPanel'
 import PageTransition from './components/shared/PageTransition'
 import AuthPage from './pages/auth/AuthPage'
+import MainFundsPage from './pages/mainfunds/MainFundsPage'
 import FundPage from './pages/fund/FundPage'
 import PlannerPage from './pages/planner/PlannerPage'
 import GuestsPage from './pages/guests/GuestsPage'
@@ -20,7 +21,8 @@ function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<Navigate to="/fund" replace />} />
+        <Route path="/" element={<Navigate to="/mainfunds" replace />} />
+        <Route path="/mainfunds" element={<PageTransition><MainFundsPage /></PageTransition>} />
         <Route path="/fund" element={<PageTransition><FundPage /></PageTransition>} />
         <Route path="/planner" element={<PageTransition><PlannerPage /></PageTransition>} />
         <Route path="/guests" element={<PageTransition><GuestsPage /></PageTransition>} />

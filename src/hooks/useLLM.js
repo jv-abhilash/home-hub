@@ -7,6 +7,31 @@ const CLAUDE_URL = 'https://api.anthropic.com/v1/messages'
 
 async function fetchContext(module) {
   try {
+    if (module === 'mainfunds') {
+      const { data: funds } = await supabase.from('home_funds').select('*')
+      const { data: dealData } = await supabase.from('home_deal').select('*').limit(1)
+      const deal = dealData?.[0]
+      if (!funds || funds.length === 0) return 'No home fund transactions recorded yet.'
+      const confirmed = funds.filter(f => f.direction === 'confirmed')
+      const expected = funds.filter(f => f.direction === 'expected')
+      const totalIn = confirmed.filter(f => f.type === 'credit').reduce((s, f) => s + Number(f.amount), 0)
+      const totalOut = confirmed.filter(f => f.type === 'debit').reduce((s, f) => s + Number(f.amount), 0)
+      const expectedIn = expected.filter(f => f.type === 'credit').reduce((s, f) => s + Number(f.amount), 0)
+      const expectedOut = expected.filter(f => f.type === 'debit').reduce((s, f) => s + Number(f.amount), 0)
+      const sources = confirmed.filter(f => f.type === 'credit').map(f => `${f.source_recipient}: Rs.${Number(f.amount).toLocaleString()}`).join(', ')
+      const payments = confirmed.filter(f => f.type === 'debit').map(f => `${f.source_recipient}: Rs.${Number(f.amount).toLocaleString()}`).join(', ')
+      return `HOME FUND DATA:
+Total received: Rs.${totalIn.toLocaleString()}
+Total paid out: Rs.${totalOut.toLocaleString()}
+Current balance: Rs.${(totalIn - totalOut).toLocaleString()}
+Expected to receive: Rs.${expectedIn.toLocaleString()}
+Expected to pay: Rs.${expectedOut.toLocaleString()}
+Deal: ${deal ? `Agreed price Rs.${Number(deal.agreed_price).toLocaleString()} with ${deal.owner_name}, paid Rs.${totalOut.toLocaleString()}, remaining Rs.${(Number(deal.agreed_price) - totalOut).toLocaleString()}` : 'Not set'}
+Sources of funds: ${sources || 'none'}
+Payments made: ${payments || 'none'}
+All transactions: ${funds.map(f => `${f.source_recipient} ${f.type === 'credit' ? 'in' : 'out'} Rs.${f.amount} (${f.direction}, ${f.date || 'no date'})`).join(' | ')}`
+    }
+
     if (module === 'fund') {
       const { data } = await supabase.from('expenses').select('*').order('date', { ascending: false })
       if (!data || data.length === 0) return 'No expenses recorded yet.'
